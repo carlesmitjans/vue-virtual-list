@@ -1,3 +1,4 @@
+import 'regenerator-runtime/runtime.js';
 import ListView from './components/list-view.vue';
 
 export function install (Vue) {
