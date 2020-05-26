@@ -1,7 +1,7 @@
 {
   "name": "vue-virtual-list",
   "version": "1.0.0",
-  "description": "A simple Vue component to render very long lists",
+  "description": "A simple Vue component for efficiently rendering and scrolling big lists",
   "keywords": [
     "vue",
     "vuejs"
@@ -11,6 +11,10 @@
   "unpkg": "dist/virtual-list.min.js",
   "browser": {
     "./sfc": "src/virtual-list.vue"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alibaba-aero/vue-virtual-list.git"
   },
   "scripts": {
     "build": "npm run build:browser && npm run build:es && npm run build:umd",
