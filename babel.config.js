@@ -5,4 +5,5 @@ module.exports = {
             { modules: false },
         ],
     ],
+    plugins: ["transform-runtime"]
 };
