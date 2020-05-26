@@ -1,0 +1,58 @@
+{
+  "name": "vue-virtual-list",
+  "version": "1.0.0",
+  "description": "A simple Vue component to render very long lists",
+  "keywords": [
+    "vue",
+    "vuejs"
+  ],
+  "main": "dist/virtual-list.umd.js",
+  "module": "dist/virtual-list.esm.js",
+  "unpkg": "dist/virtual-list.min.js",
+  "browser": {
+    "./sfc": "src/virtual-list.vue"
+  },
+  "scripts": {
+    "build": "npm run build:browser && npm run build:es && npm run build:umd",
+    "build:browser": "rollup --config build/rollup.config.browser.js",
+    "build:es": "rollup --config build/rollup.config.es.js",
+    "build:umd": "rollup --config build/rollup.config.umd.js",
+    "prepublishOnly": "npm run lint && npm run build",
+    "dev": "cross-env NODE_ENV=development rollup --config build/rollup.config.es.js --watch",
+    "lint": "eslint --ext .js,.vue src",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Mostafa Amini Nasab <m.amininasab@alibaba.ir>",
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/core": "^7.9.6",
+    "@babel/preset-env": "^7.9.6",
+    "@rollup/plugin-babel": "^5.0.2",
+    "@rollup/plugin-commonjs": "^12.0.0",
+    "@rollup/plugin-node-resolve": "^8.0.0",
+    "@rollup/plugin-replace": "^2.3.2",
+    "autoprefixer": "^9.8.0",
+    "babel-eslint": "^10.1.0",
+    "clean-css": "^4.2.3",
+    "eslint": "^7.1.0",
+    "eslint-config-standard": "^14.1.1",
+    "eslint-plugin-import": "^2.20.2",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-standard": "^4.0.1",
+    "eslint-plugin-vue": "^7.0.0-alpha.4",
+    "rollup": "^2.10.9",
+    "rollup-plugin-css-only": "^2.0.0",
+    "rollup-plugin-eslint": "^7.0.0",
+    "rollup-plugin-terser": "^6.1.0",
+    "rollup-plugin-vue": "^5.1.9",
+    "vue": "^2.6.11",
+    "vue-template-compiler": "^2.6.11"
+  },
+  "peerDependencies": {
+    "vue": "^2.6.11"
+  },
+  "dependencies": {
+    "debounce": "^1.2.0"
+  }
+}
