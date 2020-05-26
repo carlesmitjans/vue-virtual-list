@@ -5,5 +5,16 @@ module.exports = {
             { modules: false },
         ],
     ],
-    plugins: ["transform-runtime"]
+    plugins: [
+        [
+            "@babel/plugin-transform-runtime",
+            {
+                "absoluteRuntime": false,
+                "corejs": false,
+                "helpers": false,
+                "regenerator": true,
+                "useESModules": false,
+            }
+        ]
+    ]
 };
