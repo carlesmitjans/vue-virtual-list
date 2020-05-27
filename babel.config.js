@@ -3,9 +3,7 @@ module.exports = {
         [
             '@babel/preset-env',
             {
-                useBuiltIns: "usage",
                 modules: false,
-                corejs: 3,
             },
         ],
     ],
@@ -13,8 +11,7 @@ module.exports = {
         [
             "@babel/plugin-transform-runtime",
             {
-                "helpers": false,
-                "regenerator": true,
+                regenerator: true,
             }
         ]
     ]

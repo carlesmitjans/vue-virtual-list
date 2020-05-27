@@ -28,11 +28,12 @@ export default {
         }),
         css({
             output: styles => {
-                fs.writeFileSync('dist/vue-virtual-scroller.css', new CleanCSS().minify(styles).styles);
+                fs.writeFileSync('dist/vue-virtual-list.css', new CleanCSS().minify(styles).styles);
             },
         }),
         babel({
             exclude: 'node_modules/**',
+            babelHelpers: 'runtime',
         }),
         cjs(),
         replace({
