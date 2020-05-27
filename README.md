@@ -25,9 +25,7 @@ Use the scoped slot to render each item in the list:
     <div class="scroller">
         <list-view :items="list">
             <template v-slot="{ item, index }">
-                <div>
-                    <div class="user">{{ item.name }}</div>
-                </div>
+                <div class="user">{{ item.name }}</div>
             </template>
         </list-view>
     </div>
