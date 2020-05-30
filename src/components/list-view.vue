@@ -2,7 +2,7 @@
     <div
         class="listview"
         :class="{ ready }"
-        :style="{ height: `${totalHeight}px` }"
+        :style="{ height: totalHeight !== null ? `${totalHeight}px` : null }"
     >
         <div
             v-for="view in pool"
@@ -21,7 +21,7 @@
 </template>
 
 <script>
-import { debounce } from 'debounce';
+import debounce from 'debounce';
 import { getFirstScrollableParent } from '../utils/scroll';
 
 let uid = 0;
@@ -56,23 +56,23 @@ export default {
     data () {
         return {
             scrollableParent: null,
-            totalHeight: 0,
+            totalHeight: null,
             ready: false,
             pool: [],
             sizeCache: new Map(),
             views: new Map(),
             unusedViews: new Map(),
             averageItemSize: 0,
-            minItemSize: 0,
             anchorItem: { index: 0, offset: 0 },
             firstAttachedItem: 0,
             lastAttachedItem: 0,
             anchorScrollTop: 0,
+            scrollEnd: 0,
         };
     },
     watch: {
-        items () {
-            this.updateVisibleItems(true);
+        async items () {
+            await this.updateVisibleItems(true);
         },
     },
     created () {
@@ -81,25 +81,26 @@ export default {
         this.debouncedUpdatePositions = debounce(this.updateItemsPosition, 100);
 
         // In SSR mode, we also prerender the same number of item for the first render
-        // to avoir mismatch between server and client templates
+        // to avoid mismatch between server and client templates
         if (this.prerender) {
             this.$_prerender = true;
             this.updateVisibleItems(false);
         }
     },
     mounted () {
-        this.$_window_width = window.innerWidth;
         this.init();
     },
     beforeDestroy () {
         this.removeEventListeners();
+        clearTimeout(this.$_refreshTimout);
     },
     methods: {
         getFirstScrollableParent () {
             return getFirstScrollableParent(this.$el);
         },
 
-        init () {
+        async init () {
+            this.$_window_width = window.innerWidth;
             const scrollableParent = this.getFirstScrollableParent();
 
             if (scrollableParent !== document.body) {
@@ -110,7 +111,7 @@ export default {
 
             // In SSR mode, render the real number of visible items
             this.$_prerender = false;
-            this.updateVisibleItems(true);
+            await this.updateVisibleItems(true);
             this.ready = true;
         },
 
@@ -137,14 +138,15 @@ export default {
         onScroll () {
             if (!this.$_scrollDirty) {
                 this.$_scrollDirty = true;
-                requestAnimationFrame(() => {
+                requestAnimationFrame(async () => {
                     this.$_scrollDirty = false;
-                    const { continuous } = this.updateVisibleItems(false, true);
+                    const scrollResult = await this.updateVisibleItems(false, true);
+                    const continuous = scrollResult && scrollResult.continuous;
                     // It seems sometimes chrome doesn't fire scroll event :/
                     // When non continous scrolling is ending, we force a refresh
                     if (!continuous) {
                         clearTimeout(this.$_refreshTimout);
-                        this.$_refreshTimout = setTimeout(this.handleScroll, 100);
+                        this.$_refreshTimout = setTimeout(this.onScroll, 100);
                     }
                 });
             }
@@ -160,8 +162,7 @@ export default {
         },
 
         clearSizeCache () {
-            this.averageItemSize = null;
-            this.minItemSize = null;
+            this.averageItemSize = 0;
             this.sizeCache.clear();
         },
 
@@ -182,10 +183,16 @@ export default {
                         i--;
                     }
                 } else {
-                    while (delta > 0 && i < this.items.length - 1) {
-                        const key = keyField ? this.items[i + 1][keyField] : this.items[i + 1];
+                    while (delta > 0 && i <= this.items.length - 1) {
+                        const key = keyField ? this.items[i][keyField] : this.items[i];
                         const height = this.sizeCache.get(key) || this.averageItemSize;
-                        delta -= height;
+                        const nextDelta = delta - height;
+
+                        if (nextDelta <= 0) {
+                            break;
+                        }
+
+                        delta = nextDelta;
                         i++;
                     }
                 }
@@ -201,7 +208,6 @@ export default {
             const items = this.items;
             const count = items.length;
             const itemSize = this.itemSize;
-            const minItemSize = this.minItemSize;
             const averageItemSize = this.averageItemSize;
             const buffer = this.buffer;
             const views = this.views;
@@ -213,6 +219,8 @@ export default {
             const prevFirstAttachedItem = this.firstAttachedItem;
             const prevLastAttachedItem = this.lastAttachedItem;
 
+            let rerender = false;
+
             if (!count) {
                 this.firstAttachedItem = 0;
                 this.lastAttachedItem = 0;
@@ -220,25 +228,27 @@ export default {
                 return;
             } else if (this.$_prerender) {
                 this.firstAttachedItem = 0;
-                this.lastAttachedItem = this.prerender;
+                this.lastAttachedItem = Math.min(this.prerender, count - 1);
                 this.totalHeight = null;
                 return;
-            } else if (!itemSize && (!minItemSize || !averageItemSize)) {
+            } else if (!itemSize && !averageItemSize) {
                 // render an initial number of items to estimate item size
-                this.lastAttachedItem = this.firstAttachedItem + 20;
+                this.lastAttachedItem = Math.min(this.firstAttachedItem + 20, count - 1);
+                rerender = true;
             } else {
                 const scroll = this.getScroll();
                 const delta = scroll.start - this.anchorScrollTop;
 
                 // Skip update if user hasn't scrolled enough
                 if (checkPositionDiff) {
-                    let positionDiff = delta;
+                    let startPositionDiff = delta;
+                    let endPositionDiff = scroll.end - this.scrollEnd;
 
-                    if (positionDiff < 0) {
-                        positionDiff = -positionDiff;
-                    }
+                    startPositionDiff = startPositionDiff < 0 ? -startPositionDiff : startPositionDiff;
+                    endPositionDiff = endPositionDiff < 0 ? -endPositionDiff : endPositionDiff;
+                    const minScroll = itemSize || averageItemSize || 0;
 
-                    if ((itemSize === null && positionDiff < minItemSize) || positionDiff < itemSize) {
+                    if (startPositionDiff < minScroll && endPositionDiff < minScroll) {
                         return {
                             continuous: true,
                         };
@@ -252,9 +262,10 @@ export default {
                 }
 
                 this.anchorScrollTop = scroll.start;
-                const lastScreenItem = this.calculateAnchoredItem(this.anchorItem, scroll.end);
+                this.scrollEnd = scroll.end;
+                const lastScreenItem = this.calculateAnchoredItem(this.anchorItem, scroll.end - scroll.start);
                 this.firstAttachedItem = Math.max(0, this.anchorItem.index - buffer);
-                this.lastAttachedItem = Math.min(this.items.length, lastScreenItem.index + buffer);
+                this.lastAttachedItem = Math.min(count - 1, lastScreenItem.index + buffer);
             }
 
             // Collect unused views
@@ -280,7 +291,7 @@ export default {
                         }
 
                         // Check if index is still in visible range
-                        if (view.nr.index === -1 || view.nr.index < this.firstAttachedItem || view.nr.index >= this.lastAttachedItem) {
+                        if (view.nr.index === -1 || view.nr.index < this.firstAttachedItem || view.nr.index > this.lastAttachedItem) {
                             this.unuseView(view);
                         }
                     }
@@ -294,7 +305,7 @@ export default {
             let v;
             let view;
 
-            for (let i = this.firstAttachedItem; i < this.lastAttachedItem; i++) {
+            for (let i = this.firstAttachedItem; i <= this.lastAttachedItem; i++) {
                 item = items[i];
                 const key = keyField ? item[keyField] : item;
 
@@ -306,7 +317,7 @@ export default {
 
                 // No view assigned to item
                 if (!view) {
-                    type = item[typeField];
+                    type = item[typeField] || 'untyped';
                     unusedPool = unusedViews.get(type);
 
                     if (continuous) {
@@ -353,6 +364,11 @@ export default {
             this.fixScrollPosition();
 
             this.debouncedUpdatePositions();
+
+            if (rerender) {
+                await this.$nextTick();
+                await this.updateVisibleItems(checkItem);
+            }
         },
 
         getScroll () {
@@ -388,20 +404,18 @@ export default {
         },
 
         calculateTotalHeight () {
+            const keyField = this.keyField;
+
             if (this.itemSize) {
                 return this.itemSize * this.items.length;
             }
 
             let height = 0;
 
-            const itemsWithSizeCount = this.sizeCache.size;
-            const itemsWithoutSizeCount = this.items.length - itemsWithSizeCount;
-
-            height += itemsWithoutSizeCount * this.averageItemSize;
-
-            this.sizeCache.forEach((size) => {
-                height += size;
-            });
+            for (let i = 0; i < this.items.length; i++) {
+                const key = keyField ? this.items[i][keyField] : this.items[i];
+                height += this.sizeCache.get(key) || this.averageItemSize || 0;
+            }
 
             return height;
         },
@@ -464,17 +478,14 @@ export default {
 
             if (hasUpdated) {
                 const sizesCount = this.sizeCache.size;
-                let minItemSize = null;
                 let sizesSum = 0;
 
                 this.sizeCache.forEach((size) => {
-                    minItemSize = minItemSize === null ? size : Math.min(size, minItemSize);
                     sizesSum += size;
                 });
 
                 const averageItemSize = sizesSum / sizesCount;
 
-                this.minItemSize = minItemSize;
                 this.averageItemSize = averageItemSize;
             }
         },
@@ -509,7 +520,7 @@ export default {
                 i++;
             }
 
-            for (let i = this.firstAttachedItem; i < this.lastAttachedItem; i++) {
+            for (let i = this.firstAttachedItem; i <= this.lastAttachedItem; i++) {
                 const key = keyField ? this.items[i][keyField] : this.items[i];
                 const view = this.views.get(key);
                 view.position = curPos;

@@ -912,33 +912,49 @@
 	  data: function data() {
 	    return {
 	      scrollableParent: null,
-	      totalHeight: 0,
+	      totalHeight: null,
 	      ready: false,
 	      pool: [],
 	      sizeCache: new Map(),
 	      views: new Map(),
 	      unusedViews: new Map(),
 	      averageItemSize: 0,
-	      minItemSize: 0,
 	      anchorItem: {
 	        index: 0,
 	        offset: 0
 	      },
 	      firstAttachedItem: 0,
 	      lastAttachedItem: 0,
-	      anchorScrollTop: 0
+	      anchorScrollTop: 0,
+	      scrollEnd: 0
 	    };
 	  },
 	  watch: {
 	    items: function items() {
-	      this.updateVisibleItems(true);
+	      var _this = this;
+
+	      return asyncToGenerator( /*#__PURE__*/regenerator.mark(function _callee() {
+	        return regenerator.wrap(function _callee$(_context) {
+	          while (1) {
+	            switch (_context.prev = _context.next) {
+	              case 0:
+	                _context.next = 2;
+	                return _this.updateVisibleItems(true);
+
+	              case 2:
+	              case "end":
+	                return _context.stop();
+	            }
+	          }
+	        }, _callee);
+	      }))();
 	    }
 	  },
 	  created: function created() {
 	    this.$_scrollDirty = false;
 	    this.$_window_width = null;
-	    this.debouncedUpdatePositions = debounce_1.debounce(this.updateItemsPosition, 100); // In SSR mode, we also prerender the same number of item for the first render
-	    // to avoir mismatch between server and client templates
+	    this.debouncedUpdatePositions = debounce_1(this.updateItemsPosition, 100); // In SSR mode, we also prerender the same number of item for the first render
+	    // to avoid mismatch between server and client templates
 
 	    if (this.prerender) {
 	      this.$_prerender = true;
@@ -946,28 +962,49 @@
 	    }
 	  },
 	  mounted: function mounted() {
-	    this.$_window_width = window.innerWidth;
 	    this.init();
 	  },
 	  beforeDestroy: function beforeDestroy() {
 	    this.removeEventListeners();
+	    clearTimeout(this.$_refreshTimout);
 	  },
 	  methods: {
 	    getFirstScrollableParent: function getFirstScrollableParent$1() {
 	      return getFirstScrollableParent(this.$el);
 	    },
 	    init: function init() {
-	      var scrollableParent = this.getFirstScrollableParent();
+	      var _this2 = this;
 
-	      if (scrollableParent !== document.body) {
-	        this.scrollableParent = scrollableParent;
-	      }
+	      return asyncToGenerator( /*#__PURE__*/regenerator.mark(function _callee2() {
+	        var scrollableParent;
+	        return regenerator.wrap(function _callee2$(_context2) {
+	          while (1) {
+	            switch (_context2.prev = _context2.next) {
+	              case 0:
+	                _this2.$_window_width = window.innerWidth;
+	                scrollableParent = _this2.getFirstScrollableParent();
 
-	      this.addEventListeners(); // In SSR mode, render the real number of visible items
+	                if (scrollableParent !== document.body) {
+	                  _this2.scrollableParent = scrollableParent;
+	                }
 
-	      this.$_prerender = false;
-	      this.updateVisibleItems(true);
-	      this.ready = true;
+	                _this2.addEventListeners(); // In SSR mode, render the real number of visible items
+
+
+	                _this2.$_prerender = false;
+	                _context2.next = 7;
+	                return _this2.updateVisibleItems(true);
+
+	              case 7:
+	                _this2.ready = true;
+
+	              case 8:
+	              case "end":
+	                return _context2.stop();
+	            }
+	          }
+	        }, _callee2);
+	      }))();
 	    },
 	    addEventListeners: function addEventListeners() {
 	      if (!this.scrollableParent) {
@@ -988,23 +1025,37 @@
 	      window.removeEventListener('resize', this.onResize);
 	    },
 	    onScroll: function onScroll() {
-	      var _this = this;
+	      var _this3 = this;
 
 	      if (!this.$_scrollDirty) {
 	        this.$_scrollDirty = true;
-	        requestAnimationFrame(function () {
-	          _this.$_scrollDirty = false;
+	        requestAnimationFrame( /*#__PURE__*/asyncToGenerator( /*#__PURE__*/regenerator.mark(function _callee3() {
+	          var scrollResult, continuous;
+	          return regenerator.wrap(function _callee3$(_context3) {
+	            while (1) {
+	              switch (_context3.prev = _context3.next) {
+	                case 0:
+	                  _this3.$_scrollDirty = false;
+	                  _context3.next = 3;
+	                  return _this3.updateVisibleItems(false, true);
 
-	          var _this$updateVisibleIt = _this.updateVisibleItems(false, true),
-	              continuous = _this$updateVisibleIt.continuous; // It seems sometimes chrome doesn't fire scroll event :/
-	          // When non continous scrolling is ending, we force a refresh
+	                case 3:
+	                  scrollResult = _context3.sent;
+	                  continuous = scrollResult && scrollResult.continuous; // It seems sometimes chrome doesn't fire scroll event :/
+	                  // When non continous scrolling is ending, we force a refresh
 
+	                  if (!continuous) {
+	                    clearTimeout(_this3.$_refreshTimout);
+	                    _this3.$_refreshTimout = setTimeout(_this3.onScroll, 100);
+	                  }
 
-	          if (!continuous) {
-	            clearTimeout(_this.$_refreshTimout);
-	            _this.$_refreshTimout = setTimeout(_this.handleScroll, 100);
-	          }
-	        });
+	                case 6:
+	                case "end":
+	                  return _context3.stop();
+	              }
+	            }
+	          }, _callee3);
+	        })));
 	      }
 	    },
 	    onResize: function onResize() {
@@ -1017,8 +1068,7 @@
 	      }
 	    },
 	    clearSizeCache: function clearSizeCache() {
-	      this.averageItemSize = null;
-	      this.minItemSize = null;
+	      this.averageItemSize = 0;
 	      this.sizeCache.clear();
 	    },
 	    calculateAnchoredItem: function calculateAnchoredItem(initialAnchor, delta) {
@@ -1038,12 +1088,18 @@
 	            i--;
 	          }
 	        } else {
-	          while (delta > 0 && i < this.items.length - 1) {
-	            var _key = keyField ? this.items[i + 1][keyField] : this.items[i + 1];
+	          while (delta > 0 && i <= this.items.length - 1) {
+	            var _key = keyField ? this.items[i][keyField] : this.items[i];
 
 	            var _height = this.sizeCache.get(_key) || this.averageItemSize;
 
-	            delta -= _height;
+	            var nextDelta = delta - _height;
+
+	            if (nextDelta <= 0) {
+	              break;
+	            }
+
+	            delta = nextDelta;
 	            i++;
 	          }
 	        }
@@ -1056,128 +1112,130 @@
 	    },
 	    updateVisibleItems: function updateVisibleItems(checkItem) {
 	      var _arguments = arguments,
-	          _this2 = this;
+	          _this4 = this;
 
-	      return asyncToGenerator( /*#__PURE__*/regenerator.mark(function _callee() {
-	        var checkPositionDiff, items, count, itemSize, minItemSize, averageItemSize, buffer, views, unusedViews, keyField, typeField, pool, prevFirstAttachedItem, prevLastAttachedItem, scroll, delta, positionDiff, lastScreenItem, continuous, unusedIndex, item, type, unusedPool, v, view, i, key;
-	        return regenerator.wrap(function _callee$(_context) {
+	      return asyncToGenerator( /*#__PURE__*/regenerator.mark(function _callee4() {
+	        var checkPositionDiff, items, count, itemSize, averageItemSize, buffer, views, unusedViews, keyField, typeField, pool, prevFirstAttachedItem, prevLastAttachedItem, rerender, scroll, delta, startPositionDiff, endPositionDiff, minScroll, lastScreenItem, continuous, unusedIndex, item, type, unusedPool, v, view, i, key;
+	        return regenerator.wrap(function _callee4$(_context4) {
 	          while (1) {
-	            switch (_context.prev = _context.next) {
+	            switch (_context4.prev = _context4.next) {
 	              case 0:
 	                checkPositionDiff = _arguments.length > 1 && _arguments[1] !== undefined ? _arguments[1] : false;
-	                items = _this2.items;
+	                items = _this4.items;
 	                count = items.length;
-	                itemSize = _this2.itemSize;
-	                minItemSize = _this2.minItemSize;
-	                averageItemSize = _this2.averageItemSize;
-	                buffer = _this2.buffer;
-	                views = _this2.views;
-	                unusedViews = _this2.unusedViews;
-	                keyField = _this2.keyField;
-	                typeField = _this2.typeField;
-	                pool = _this2.pool;
-	                prevFirstAttachedItem = _this2.firstAttachedItem;
-	                prevLastAttachedItem = _this2.lastAttachedItem;
+	                itemSize = _this4.itemSize;
+	                averageItemSize = _this4.averageItemSize;
+	                buffer = _this4.buffer;
+	                views = _this4.views;
+	                unusedViews = _this4.unusedViews;
+	                keyField = _this4.keyField;
+	                typeField = _this4.typeField;
+	                pool = _this4.pool;
+	                prevFirstAttachedItem = _this4.firstAttachedItem;
+	                prevLastAttachedItem = _this4.lastAttachedItem;
+	                rerender = false;
 
 	                if (count) {
-	                  _context.next = 21;
+	                  _context4.next = 21;
 	                  break;
 	                }
 
-	                _this2.firstAttachedItem = 0;
-	                _this2.lastAttachedItem = 0;
-	                _this2.totalHeight = 0;
-	                return _context.abrupt("return");
+	                _this4.firstAttachedItem = 0;
+	                _this4.lastAttachedItem = 0;
+	                _this4.totalHeight = 0;
+	                return _context4.abrupt("return");
 
 	              case 21:
-	                if (!_this2.$_prerender) {
-	                  _context.next = 28;
+	                if (!_this4.$_prerender) {
+	                  _context4.next = 28;
 	                  break;
 	                }
 
-	                _this2.firstAttachedItem = 0;
-	                _this2.lastAttachedItem = _this2.prerender;
-	                _this2.totalHeight = null;
-	                return _context.abrupt("return");
+	                _this4.firstAttachedItem = 0;
+	                _this4.lastAttachedItem = Math.min(_this4.prerender, count - 1);
+	                _this4.totalHeight = null;
+	                return _context4.abrupt("return");
 
 	              case 28:
-	                if (!(!itemSize && (!minItemSize || !averageItemSize))) {
-	                  _context.next = 32;
+	                if (!(!itemSize && !averageItemSize)) {
+	                  _context4.next = 33;
 	                  break;
 	                }
 
 	                // render an initial number of items to estimate item size
-	                _this2.lastAttachedItem = _this2.firstAttachedItem + 20;
-	                _context.next = 44;
+	                _this4.lastAttachedItem = Math.min(_this4.firstAttachedItem + 20, count - 1);
+	                rerender = true;
+	                _context4.next = 49;
 	                break;
 
-	              case 32:
-	                scroll = _this2.getScroll();
-	                delta = scroll.start - _this2.anchorScrollTop; // Skip update if user hasn't scrolled enough
+	              case 33:
+	                scroll = _this4.getScroll();
+	                delta = scroll.start - _this4.anchorScrollTop; // Skip update if user hasn't scrolled enough
 
 	                if (!checkPositionDiff) {
-	                  _context.next = 39;
+	                  _context4.next = 43;
 	                  break;
 	                }
 
-	                positionDiff = delta;
+	                startPositionDiff = delta;
+	                endPositionDiff = scroll.end - _this4.scrollEnd;
+	                startPositionDiff = startPositionDiff < 0 ? -startPositionDiff : startPositionDiff;
+	                endPositionDiff = endPositionDiff < 0 ? -endPositionDiff : endPositionDiff;
+	                minScroll = itemSize || averageItemSize || 0;
 
-	                if (positionDiff < 0) {
-	                  positionDiff = -positionDiff;
-	                }
-
-	                if (!(itemSize === null && positionDiff < minItemSize || positionDiff < itemSize)) {
-	                  _context.next = 39;
+	                if (!(startPositionDiff < minScroll && endPositionDiff < minScroll)) {
+	                  _context4.next = 43;
 	                  break;
 	                }
 
-	                return _context.abrupt("return", {
+	                return _context4.abrupt("return", {
 	                  continuous: true
 	                });
 
-	              case 39:
+	              case 43:
 	                if (scroll.start === 0) {
-	                  _this2.anchorItem = {
+	                  _this4.anchorItem = {
 	                    index: 0,
 	                    offset: 0
 	                  };
 	                } else {
-	                  _this2.anchorItem = _this2.calculateAnchoredItem(_this2.anchorItem, delta);
+	                  _this4.anchorItem = _this4.calculateAnchoredItem(_this4.anchorItem, delta);
 	                }
 
-	                _this2.anchorScrollTop = scroll.start;
-	                lastScreenItem = _this2.calculateAnchoredItem(_this2.anchorItem, scroll.end);
-	                _this2.firstAttachedItem = Math.max(0, _this2.anchorItem.index - buffer);
-	                _this2.lastAttachedItem = Math.min(_this2.items.length, lastScreenItem.index + buffer);
+	                _this4.anchorScrollTop = scroll.start;
+	                _this4.scrollEnd = scroll.end;
+	                lastScreenItem = _this4.calculateAnchoredItem(_this4.anchorItem, scroll.end - scroll.start);
+	                _this4.firstAttachedItem = Math.max(0, _this4.anchorItem.index - buffer);
+	                _this4.lastAttachedItem = Math.min(count - 1, lastScreenItem.index + buffer);
 
-	              case 44:
+	              case 49:
 	                // Collect unused views
-	                continuous = _this2.firstAttachedItem <= prevLastAttachedItem && _this2.lastAttachedItem >= prevFirstAttachedItem;
+	                continuous = _this4.firstAttachedItem <= prevLastAttachedItem && _this4.lastAttachedItem >= prevFirstAttachedItem;
 
-	                if (_this2.continuous !== continuous) {
+	                if (_this4.continuous !== continuous) {
 	                  if (continuous) {
 	                    views.clear();
 	                    unusedViews.clear();
 
-	                    _this2.pool.forEach(function (view) {
-	                      _this2.unuseView(view);
+	                    _this4.pool.forEach(function (view) {
+	                      _this4.unuseView(view);
 	                    });
 	                  }
 
-	                  _this2.continuous = continuous;
+	                  _this4.continuous = continuous;
 	                } else if (continuous) {
-	                  _this2.pool.forEach(function (view) {
+	                  _this4.pool.forEach(function (view) {
 	                    if (view.nr.used) {
 	                      // Update view item index
 	                      if (checkItem) {
 	                        view.nr.index = items.findIndex(function (item) {
-	                          return _this2.keyField ? item[keyField] === view.item[keyField] : item === view.item;
+	                          return _this4.keyField ? item[keyField] === view.item[keyField] : item === view.item;
 	                        });
 	                      } // Check if index is still in visible range
 
 
-	                      if (view.nr.index === -1 || view.nr.index < _this2.firstAttachedItem || view.nr.index >= _this2.lastAttachedItem) {
-	                        _this2.unuseView(view);
+	                      if (view.nr.index === -1 || view.nr.index < _this4.firstAttachedItem || view.nr.index > _this4.lastAttachedItem) {
+	                        _this4.unuseView(view);
 	                      }
 	                    }
 	                  });
@@ -1185,11 +1243,11 @@
 
 
 	                unusedIndex = continuous ? null : new Map();
-	                i = _this2.firstAttachedItem;
+	                i = _this4.firstAttachedItem;
 
-	              case 48:
-	                if (!(i < _this2.lastAttachedItem)) {
-	                  _context.next = 58;
+	              case 53:
+	                if (!(i <= _this4.lastAttachedItem)) {
+	                  _context4.next = 63;
 	                  break;
 	                }
 
@@ -1197,17 +1255,17 @@
 	                key = keyField ? item[keyField] : item;
 
 	                if (!(key == null)) {
-	                  _context.next = 53;
+	                  _context4.next = 58;
 	                  break;
 	                }
 
 	                throw new Error("Key is ".concat(key, " on item (keyField is '").concat(keyField, "')"));
 
-	              case 53:
+	              case 58:
 	                view = views.get(key); // No view assigned to item
 
 	                if (!view) {
-	                  type = item[typeField];
+	                  type = item[typeField] || 'untyped';
 	                  unusedPool = unusedViews.get(type);
 
 	                  if (continuous) {
@@ -1220,7 +1278,7 @@
 	                      view.nr.key = key;
 	                      view.nr.type = type;
 	                    } else {
-	                      view = _this2.addView(pool, i, item, key, type);
+	                      view = _this4.addView(pool, i, item, key, type);
 	                    }
 	                  } else {
 	                    // Use existing view
@@ -1229,9 +1287,9 @@
 	                    v = unusedIndex.get(type) || 0;
 
 	                    if (!unusedPool || v >= unusedPool.length) {
-	                      view = _this2.addView(pool, i, item, key, type);
+	                      view = _this4.addView(pool, i, item, key, type);
 
-	                      _this2.unuseView(view, true);
+	                      _this4.unuseView(view, true);
 
 	                      unusedPool = unusedViews.get(type);
 	                    }
@@ -1252,30 +1310,42 @@
 	                  view.item = item;
 	                }
 
-	              case 55:
+	              case 60:
 	                i++;
-	                _context.next = 48;
+	                _context4.next = 53;
 	                break;
 
-	              case 58:
-	                _context.next = 60;
-	                return _this2.$nextTick();
+	              case 63:
+	                _context4.next = 65;
+	                return _this4.$nextTick();
 
-	              case 60:
-	                _this2.measureItems();
+	              case 65:
+	                _this4.measureItems();
 
-	                _this2.totalHeight = _this2.calculateTotalHeight();
+	                _this4.totalHeight = _this4.calculateTotalHeight();
 
-	                _this2.fixScrollPosition();
+	                _this4.fixScrollPosition();
 
-	                _this2.debouncedUpdatePositions();
+	                _this4.debouncedUpdatePositions();
 
-	              case 64:
+	                if (!rerender) {
+	                  _context4.next = 74;
+	                  break;
+	                }
+
+	                _context4.next = 72;
+	                return _this4.$nextTick();
+
+	              case 72:
+	                _context4.next = 74;
+	                return _this4.updateVisibleItems(checkItem);
+
+	              case 74:
 	              case "end":
-	                return _context.stop();
+	                return _context4.stop();
 	            }
 	          }
-	        }, _callee);
+	        }, _callee4);
 	      }))();
 	    },
 	    getScroll: function getScroll() {
@@ -1311,17 +1381,19 @@
 	      return scrollState;
 	    },
 	    calculateTotalHeight: function calculateTotalHeight() {
+	      var keyField = this.keyField;
+
 	      if (this.itemSize) {
 	        return this.itemSize * this.items.length;
 	      }
 
 	      var height = 0;
-	      var itemsWithSizeCount = this.sizeCache.size;
-	      var itemsWithoutSizeCount = this.items.length - itemsWithSizeCount;
-	      height += itemsWithoutSizeCount * this.averageItemSize;
-	      this.sizeCache.forEach(function (size) {
-	        height += size;
-	      });
+
+	      for (var i = 0; i < this.items.length; i++) {
+	        var key = keyField ? this.items[i][keyField] : this.items[i];
+	        height += this.sizeCache.get(key) || this.averageItemSize || 0;
+	      }
+
 	      return height;
 	    },
 	    unuseView: function unuseView(view) {
@@ -1363,35 +1435,32 @@
 	      return view;
 	    },
 	    measureItems: function measureItems() {
-	      var _this3 = this;
+	      var _this5 = this;
 
 	      var poolDomElements = this.$refs.listviewItem;
 	      var hasUpdated = false;
 	      poolDomElements.forEach(function (poolDomElement, index) {
-	        var view = _this3.pool[index];
+	        var view = _this5.pool[index];
 
 	        if (view.nr.used) {
 	          var height = poolDomElement.offsetHeight;
 	          var key = view.nr.key;
 
-	          if (!_this3.sizeCache.has(key) || _this3.sizeCache.get(key) !== height) {
+	          if (!_this5.sizeCache.has(key) || _this5.sizeCache.get(key) !== height) {
 	            hasUpdated = true;
 
-	            _this3.sizeCache.set(key, height);
+	            _this5.sizeCache.set(key, height);
 	          }
 	        }
 	      });
 
 	      if (hasUpdated) {
 	        var sizesCount = this.sizeCache.size;
-	        var minItemSize = null;
 	        var sizesSum = 0;
 	        this.sizeCache.forEach(function (size) {
-	          minItemSize = minItemSize === null ? size : Math.min(size, minItemSize);
 	          sizesSum += size;
 	        });
 	        var averageItemSize = sizesSum / sizesCount;
-	        this.minItemSize = minItemSize;
 	        this.averageItemSize = averageItemSize;
 	      }
 	    },
@@ -1426,7 +1495,7 @@
 	        i++;
 	      }
 
-	      for (var _i = this.firstAttachedItem; _i < this.lastAttachedItem; _i++) {
+	      for (var _i = this.firstAttachedItem; _i <= this.lastAttachedItem; _i++) {
 	        var _key3 = keyField ? this.items[_i][keyField] : this.items[_i];
 
 	        var view = this.views.get(_key3);
@@ -1524,7 +1593,9 @@
 	    {
 	      staticClass: "listview",
 	      class: { ready: _vm.ready },
-	      style: { height: _vm.totalHeight + "px" }
+	      style: {
+	        height: _vm.totalHeight !== null ? _vm.totalHeight + "px" : null
+	      }
 	    },
 	    _vm._l(_vm.pool, function(view) {
 	      return _c(
@@ -1557,7 +1628,7 @@
 	  /* style */
 	  const __vue_inject_styles__ = undefined;
 	  /* scoped */
-	  const __vue_scope_id__ = "data-v-a8581048";
+	  const __vue_scope_id__ = "data-v-4c000c37";
 	  /* module identifier */
 	  const __vue_module_identifier__ = undefined;
 	  /* functional template */
