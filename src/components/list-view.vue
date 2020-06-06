@@ -21,7 +21,6 @@
 </template>
 
 <script>
-import debounce from 'debounce';
 import { getFirstScrollableParent } from '../utils/scroll';
 
 let uid = 0;
@@ -78,7 +77,6 @@ export default {
     created () {
         this.$_scrollDirty = false;
         this.$_window_width = null;
-        this.debouncedUpdatePositions = debounce(this.updateItemsPosition, 100);
 
         // In SSR mode, we also prerender the same number of item for the first render
         // to avoid mismatch between server and client templates
@@ -363,7 +361,17 @@ export default {
             this.totalHeight = this.calculateTotalHeight();
             this.fixScrollPosition();
 
-            this.debouncedUpdatePositions();
+            if (window && window.cancelAnimationFrame && window.requestAnimationFrame) {
+                if (this.updatePositionsRAF) {
+                    window.cancelAnimationFrame(this.updatePositionsRAF);
+                }
+
+                this.updatePositionsRAF = window.requestAnimationFrame(() => {
+                    this.updateItemsPosition();
+                });
+            } else {
+                this.updateItemsPosition();
+            }
 
             if (rerender) {
                 await this.$nextTick();
