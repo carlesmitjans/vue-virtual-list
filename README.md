@@ -1,5 +1,7 @@
 # vue-virtual-list
 
+A simple virtual scroll vue component for performant rendering of very long lists. This component is largely based on [vue-virtual-scroller](https://github.com/Akryum/vue-virtual-scroller).
+
 ## Installation
 
 ```
