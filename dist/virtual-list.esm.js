@@ -983,7 +983,7 @@ var script = {
             switch (_context2.prev = _context2.next) {
               case 0:
                 _this2.$_window_width = window.innerWidth;
-                scrollableParent = _this2.getFirstScrollableParent();
+                scrollableParent = _this2.parentElement;
 
                 if (scrollableParent !== document.body) {
                   _this2.scrollableParent = scrollableParent;
