@@ -901,6 +901,10 @@ var script = {
     typeField: {
       type: String,
       "default": 'type'
+    },
+    parentElement: {
+      type: HTMLDivElement,
+      "default": null
     }
   },
   data: function data() {
@@ -924,6 +928,9 @@ var script = {
     };
   },
   watch: {
+    parentElement() {
+      this.init();
+    },
     items: function items() {
       var _this = this;
 
